@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IconDashboard, IconDatabase, IconInnerShadowTop, IconSettings, IconFileText } from "@tabler/icons-react";
+import { IconDashboard, IconDatabase, IconSettings, IconFileText } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -86,8 +86,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-hidden">
+                  <img src="/logo.jpg" alt="Logo" className="size-full object-cover" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">PPA Clinic</span>
+                  <span className="truncate text-xs text-muted-foreground">Safety System</span>
+                </div>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
