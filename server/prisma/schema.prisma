@@ -1,0 +1,161 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Model Role
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // admin, user, hr
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Model User untuk login aplikasi
+model User {
+  id        Int      @id @default(autoincrement())
+  nrp       String   @unique
+  password  String
+  name      String?
+  roleId    Int
+  role      Role     @relation(fields: [roleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Konfigurasi Threshold Vital Signs
+model VitalsThreshold {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique // sistole, diastole, nadi, suhu, rr, spo2
+  label     String   // Nama yang tampil di UI
+  min       Float
+  max       Float
+  unit      String
+  updatedAt DateTime @updatedAt
+}
+
+// Master Data: Jenis Pekerjaan
+model JenisPekerjaan {
+  id        Int      @id @default(autoincrement())
+  kode      String   @unique
+  nama      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pengajuan Pengajuan[]
+}
+
+// Master Data: Perusahaan
+model Perusahaan {
+  id          Int          @id @default(autoincrement())
+  kode        String       @unique
+  nama        String
+  alamat      String?
+  telepon     String?
+  email       String?
+  website     String?
+  departemen  Departemen[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  pengajuan   Pengajuan[]
+}
+
+// Master Data: Departemen
+model Departemen {
+  id           Int        @id @default(autoincrement())
+  kode         String     @unique
+  nama         String
+  perusahaanId Int
+  perusahaan   Perusahaan @relation(fields: [perusahaanId], references: [id])
+  jabatan      Jabatan[]
+  karyawan     Karyawan[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  pengajuan    Pengajuan[]
+}
+
+// Master Data: Jabatan
+model Jabatan {
+  id           Int        @id @default(autoincrement())
+  kode         String     @unique
+  nama         String
+  departemenId Int
+  departemen   Departemen @relation(fields: [departemenId], references: [id])
+  karyawan     Karyawan[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  pengajuan    Pengajuan[]
+}
+
+// Master Data: Karyawan
+model Karyawan {
+  id            Int        @id @default(autoincrement())
+  nrp           String?    // Optional
+  nrpBib        String?    // Tambahan NRP BIB
+  nama          String
+  telepon       String?
+  tanggalLahir  DateTime?
+  tanggalMasuk  DateTime?
+  tinggiBadan   Float?     // Tambahan (cm)
+  beratBadan    Float?     // Tambahan (kg)
+  status        String     @default("ACTIVE") // ACTIVE, RESIGNED, LEAVE
+  
+  // Relasi
+  departemenId  Int
+  departemen    Departemen @relation(fields: [departemenId], references: [id])
+  
+  jabatanId     Int
+  jabatan       Jabatan    @relation(fields: [jabatanId], references: [id])
+
+  // Relasi Pengajuan
+  pengajuanPemegang   Pengajuan[] @relation("PemegangIjin")
+  pengajuanPemeriksa  Pengajuan[] @relation("PetugasPemeriksa")
+  pengajuanPengawas   Pengajuan[] @relation("PengawasPekerjaan")
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+// Transaksi: Pengajuan Izin Kerja
+model Pengajuan {
+  id              Int      @id @default(autoincrement())
+  tanggal         DateTime?
+  waktu           String?
+  lokasiKerja     String?
+  
+  departemenId    Int
+  departemen      Departemen @relation(fields: [departemenId], references: [id])
+  
+  judulPekerjaan  String
+  nomorIzinKerja  String?
+  
+  pemegangIjinId  Int
+  pemegangIjin    Karyawan @relation("PemegangIjin", fields: [pemegangIjinId], references: [id])
+  
+  jabatanId       Int
+  jabatan         Jabatan @relation(fields: [jabatanId], references: [id])
+  
+  perusahaanId    Int
+  perusahaan      Perusahaan @relation(fields: [perusahaanId], references: [id])
+
+  jenisPekerjaanId Int
+  jenisPekerjaan   JenisPekerjaan @relation(fields: [jenisPekerjaanId], references: [id])
+  
+  keterangan       String?
+  
+  petugasPemeriksaId Int?
+  petugasPemeriksa   Karyawan? @relation("PetugasPemeriksa", fields: [petugasPemeriksaId], references: [id])
+
+  pengawasPekerjaanId Int?
+  pengawasPekerjaan   Karyawan? @relation("PengawasPekerjaan", fields: [pengawasPekerjaanId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
