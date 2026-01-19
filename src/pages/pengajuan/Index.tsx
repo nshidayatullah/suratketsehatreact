@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconPencil } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,10 +43,12 @@ interface Pengajuan {
 }
 
 export default function PengajuanPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState<Pengajuan[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   // Master Data State
   const [karyawanList, setKaryawanList] = useState<Karyawan[]>([]);
@@ -106,6 +109,7 @@ export default function PengajuanPage() {
 
   // Handle Add
   const handleAdd = () => {
+    setEditingId(null);
     setFormData({
       tanggal: new Date().toISOString().split("T")[0],
       waktu: "08:00",
@@ -120,6 +124,27 @@ export default function PengajuanPage() {
       keterangan: "",
       petugasPemeriksaId: "",
       pengawasPekerjaanId: "",
+    });
+    setOpen(true);
+  };
+
+  // Handle Edit
+  const handleEdit = (item: Pengajuan) => {
+    setEditingId(item.id);
+    setFormData({
+      tanggal: item.tanggal ? new Date(item.tanggal).toISOString().split("T")[0] : "",
+      waktu: item.waktu || "",
+      lokasiKerja: item.lokasiKerja || "",
+      departemenId: item.departemen?.id.toString() || "",
+      judulPekerjaan: item.judulPekerjaan || "",
+      nomorIzinKerja: item.nomorIzinKerja || "",
+      pemegangIjinId: item.pemegangIjin?.id.toString() || "",
+      jabatanId: item.jabatan?.id.toString() || "",
+      perusahaanId: item.perusahaan?.id.toString() || "",
+      jenisPekerjaanId: item.jenisPekerjaan?.id.toString() || "",
+      keterangan: item.keterangan || "",
+      petugasPemeriksaId: item.petugasPemeriksa?.id.toString() || "",
+      pengawasPekerjaanId: item.pengawasPekerjaan?.id.toString() || "",
     });
     setOpen(true);
   };
@@ -139,14 +164,18 @@ export default function PengajuanPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/pengajuan", {
-        method: "POST",
+      const url = editingId ? `http://localhost:3000/api/pengajuan/${editingId}` : "http://localhost:3000/api/pengajuan";
+
+      const method = editingId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (res.ok) {
-        toast.success("Pengajuan berhasil dibuat");
+        toast.success(editingId ? "Pengajuan berhasil diperbarui" : "Pengajuan berhasil dibuat");
         setOpen(false);
         fetchAllData(); // Refresh list
       } else {
@@ -233,7 +262,7 @@ export default function PengajuanPage() {
               </TableRow>
             ) : (
               data.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/pengajuan/${item.id}`)}>
                   <TableCell className="font-medium font-mono">{item.nomorIzinKerja}</TableCell>
                   <TableCell>
                     <div className="flex flex-col text-sm">
@@ -283,7 +312,24 @@ export default function PengajuanPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(item);
+                      }}
+                    >
+                      <IconPencil className="size-4 text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
                       <IconTrash className="size-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -298,8 +344,8 @@ export default function PengajuanPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[700px] h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Buat Pengajuan Izin Kerja</DialogTitle>
-            <DialogDescription>Lengkapi formulir pengajuan izin kerja di bawah ini.</DialogDescription>
+            <DialogTitle>{editingId ? "Edit Pengajuan Izin Kerja" : "Buat Pengajuan Izin Kerja"}</DialogTitle>
+            <DialogDescription>{editingId ? "Perbarui informasi pengajuan izin kerja." : "Lengkapi formulir pengajuan izin kerja di bawah ini."}</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto py-4 px-2">
             <form id="pengajuan-form" onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 py-4">

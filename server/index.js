@@ -39,9 +39,9 @@ app.get("/api/perusahaan", async (req, res) => {
 // Create
 app.post("/api/perusahaan", async (req, res) => {
   try {
-    const { kode, nama, alamat } = req.body;
+    const { kode, nama, alamat, status } = req.body;
     const newData = await prisma.perusahaan.create({
-      data: { kode, nama, alamat },
+      data: { kode, nama, alamat, status },
     });
     res.json(newData);
   } catch (error) {
@@ -54,10 +54,10 @@ app.post("/api/perusahaan", async (req, res) => {
 app.put("/api/perusahaan/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { kode, nama, alamat } = req.body;
+    const { kode, nama, alamat, status } = req.body;
     const updatedData = await prisma.perusahaan.update({
       where: { id: parseInt(id) },
-      data: { kode, nama, alamat },
+      data: { kode, nama, alamat, status },
     });
     res.json(updatedData);
   } catch (error) {
@@ -96,12 +96,13 @@ app.get("/api/departemen", async (req, res) => {
 // Create
 app.post("/api/departemen", async (req, res) => {
   try {
-    const { kode, nama, perusahaanId } = req.body;
+    const { kode, nama, perusahaanId, status } = req.body;
     const newData = await prisma.departemen.create({
       data: {
         kode,
         nama,
         perusahaanId: parseInt(perusahaanId),
+        status,
       },
     });
     res.json(newData);
@@ -115,13 +116,14 @@ app.post("/api/departemen", async (req, res) => {
 app.put("/api/departemen/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { kode, nama, perusahaanId } = req.body;
+    const { kode, nama, perusahaanId, status } = req.body;
     const updatedData = await prisma.departemen.update({
       where: { id: parseInt(id) },
       data: {
         kode,
         nama,
         perusahaanId: parseInt(perusahaanId),
+        status,
       },
     });
     res.json(updatedData);
@@ -166,12 +168,13 @@ app.get("/api/jabatan", async (req, res) => {
 // Create
 app.post("/api/jabatan", async (req, res) => {
   try {
-    const { kode, nama, departemenId } = req.body;
+    const { kode, nama, departemenId, status } = req.body;
     const newData = await prisma.jabatan.create({
       data: {
         kode,
         nama,
         departemenId: parseInt(departemenId),
+        status,
       },
     });
     res.json(newData);
@@ -185,13 +188,14 @@ app.post("/api/jabatan", async (req, res) => {
 app.put("/api/jabatan/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { kode, nama, departemenId } = req.body;
+    const { kode, nama, departemenId, status } = req.body;
     const updatedData = await prisma.jabatan.update({
       where: { id: parseInt(id) },
       data: {
         kode,
         nama,
         departemenId: parseInt(departemenId),
+        status,
       },
     });
     res.json(updatedData);
@@ -384,6 +388,29 @@ app.get("/api/pengajuan", async (req, res) => {
   }
 });
 
+app.get("/api/pengajuan/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = await prisma.pengajuan.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        departemen: true,
+        jabatan: true,
+        perusahaan: true,
+        jenisPekerjaan: true,
+        pemegangIjin: true,
+        petugasPemeriksa: true,
+        pengawasPekerjaan: true,
+        pemeriksaanFisik: true,
+      },
+    });
+    if (!data) return res.status(404).json({ error: "Data not found" });
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/pengajuan", async (req, res) => {
   try {
     const { tanggal, waktu, lokasiKerja, departemenId, judulPekerjaan, nomorIzinKerja, pemegangIjinId, jabatanId, perusahaanId, jenisPekerjaanId, keterangan, petugasPemeriksaId, pengawasPekerjaanId } = req.body;
@@ -406,6 +433,49 @@ app.post("/api/pengajuan", async (req, res) => {
       },
     });
     res.json(newData);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.put("/api/pengajuan/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tanggal, waktu, lokasiKerja, departemenId, judulPekerjaan, nomorIzinKerja, pemegangIjinId, jabatanId, perusahaanId, jenisPekerjaanId, keterangan, petugasPemeriksaId, pengawasPekerjaanId } = req.body;
+
+    const updatedData = await prisma.pengajuan.update({
+      where: { id: parseInt(id) },
+      data: {
+        tanggal: tanggal ? new Date(tanggal) : null,
+        waktu,
+        lokasiKerja,
+        departemenId: parseInt(departemenId),
+        judulPekerjaan,
+        nomorIzinKerja,
+        pemegangIjinId: parseInt(pemegangIjinId),
+        jabatanId: parseInt(jabatanId),
+        perusahaanId: parseInt(perusahaanId),
+        jenisPekerjaanId: parseInt(jenisPekerjaanId),
+        keterangan,
+        petugasPemeriksaId: petugasPemeriksaId ? parseInt(petugasPemeriksaId) : null,
+        pengawasPekerjaanId: pengawasPekerjaanId ? parseInt(pengawasPekerjaanId) : null,
+        pemeriksaanFisik: {
+          deleteMany: {},
+          create: req.body.anggotaTim?.map((row) => ({
+            karyawanId: row.karyawanId ? parseInt(row.karyawanId) : null,
+            nama: row.nama,
+            td: row.td,
+            nadi: row.nadi,
+            rr: row.rr,
+            sao2: row.sao2,
+            suhu: row.suhu,
+            keluhan: row.keluhan,
+            rekomendasi: row.rekomendasi,
+          })),
+        },
+      },
+    });
+    res.json(updatedData);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -470,9 +540,9 @@ app.get("/api/users", async (req, res) => {
 });
 app.post("/api/users", async (req, res) => {
   try {
-    const { name, nrp, password, roleId } = req.body;
+    const { name, nrp, password, roleId, status } = req.body;
     const newData = await prisma.user.create({
-      data: { name, nrp, password, roleId: parseInt(roleId) },
+      data: { name, nrp, password, roleId: parseInt(roleId), status: status || "ACTIVE" },
     });
     res.json(newData);
   } catch (error) {
@@ -482,8 +552,8 @@ app.post("/api/users", async (req, res) => {
 app.put("/api/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, nrp, password, roleId } = req.body;
-    const data = { name, nrp, roleId: parseInt(roleId) };
+    const { name, nrp, password, roleId, status } = req.body;
+    const data = { name, nrp, roleId: parseInt(roleId), status };
     if (password) data.password = password;
     const updated = await prisma.user.update({ where: { id: parseInt(id) }, data });
     res.json(updated);

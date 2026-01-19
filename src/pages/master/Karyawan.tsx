@@ -5,9 +5,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IconPencil, IconPlus, IconTrash, IconBuilding, IconSitemap, IconBriefcase } from "@tabler/icons-react";
+import { IconPencil, IconPlus, IconTrash, IconBuilding, IconSitemap, IconBriefcase, IconBrandWhatsapp } from "@tabler/icons-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 
 interface Perusahaan {
   id: number;
@@ -62,6 +61,18 @@ export default function MasterKaryawan() {
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Filter & Pagination State
+  const [filters, setFilters] = useState({
+    nrp: "",
+    nama: "",
+    perusahaan: "all",
+    departemen: "all",
+    jabatan: "all",
+    status: "all",
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   // Form State
   const [formData, setFormData] = useState({
     nrp: "",
@@ -79,9 +90,29 @@ export default function MasterKaryawan() {
   });
 
   // Derived Lists
+  // Derived Lists form Form
   const filteredDepartemen = departemenList.filter((d) => d.perusahaanId.toString() === formData.perusahaanId);
-
   const filteredJabatan = jabatanList.filter((j) => j.departemenId.toString() === formData.departemenId);
+
+  // Filter Logic for Table
+  const filteredData = data.filter((item) => {
+    const matchNrp = item.nrp.toLowerCase().includes(filters.nrp.toLowerCase()) || (item.nrpBib && item.nrpBib.toLowerCase().includes(filters.nrp.toLowerCase()));
+    const matchNama = item.nama.toLowerCase().includes(filters.nama.toLowerCase());
+    const matchPerusahaan = filters.perusahaan === "all" || item.departemen?.perusahaan?.nama === filters.perusahaan;
+    const matchDepartemen = filters.departemen === "all" || item.departemen?.nama === filters.departemen;
+    const matchJabatan = filters.jabatan === "all" || item.jabatan?.nama === filters.jabatan;
+    const matchStatus = filters.status === "all" || item.status === filters.status;
+    return matchNrp && matchNama && matchPerusahaan && matchDepartemen && matchJabatan && matchStatus;
+  });
+
+  // Unique Lists for Filters
+  const uniquePerusahaan = Array.from(new Set(perusahaanList.map((p) => p.nama))).sort();
+  const uniqueDepartemen = Array.from(new Set(departemenList.map((d) => d.nama))).sort();
+  const uniqueJabatan = Array.from(new Set(jabatanList.map((j) => j.nama))).sort();
+
+  // Pagination Logic
+  const totalPages = itemsPerPage === 0 ? 1 : Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = itemsPerPage === 0 ? filteredData : filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Fetch Data
   const fetchData = async (retry = false) => {
@@ -379,34 +410,109 @@ export default function MasterKaryawan() {
       </Dialog>
 
       {/* Table */}
-      <div className="border rounded-md">
+      <div className="rounded-xl border shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>NRP / NRP BIB</TableHead>
+            <TableRow className="bg-blue-600 hover:bg-blue-600 [&_th]:text-white">
+              <TableHead className="w-[150px]">NRP / NRP BIB</TableHead>
               <TableHead>Nama Karyawan</TableHead>
-              <TableHead>Jabatan & Dept</TableHead>
+              <TableHead>Jabatan</TableHead>
+              <TableHead>Departemen</TableHead>
               <TableHead>Perusahaan</TableHead>
               <TableHead>TB / BB</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
+            <TableRow>
+              <TableHead className="p-2">
+                <Input placeholder="Cari NRP..." value={filters.nrp} onChange={(e) => setFilters({ ...filters, nrp: e.target.value })} className="h-8 text-xs" />
+              </TableHead>
+              <TableHead className="p-2">
+                <Input placeholder="Cari Nama..." value={filters.nama} onChange={(e) => setFilters({ ...filters, nama: e.target.value })} className="h-8 text-xs" />
+              </TableHead>
+              <TableHead className="p-2">
+                <Select value={filters.jabatan} onValueChange={(val) => setFilters({ ...filters, jabatan: val })}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Jabatan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Jabatan</SelectItem>
+                    {uniqueJabatan.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableHead>
+              <TableHead className="p-2">
+                <Select value={filters.departemen} onValueChange={(val) => setFilters({ ...filters, departemen: val })}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Departemen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dept</SelectItem>
+                    {uniqueDepartemen.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableHead>
+              <TableHead className="p-2">
+                <Select value={filters.perusahaan} onValueChange={(val) => setFilters({ ...filters, perusahaan: val })}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Perusahaan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {uniquePerusahaan.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableHead>
+              <TableHead></TableHead>
+              <TableHead className="p-2">
+                <Select value={filters.status} onValueChange={(val) => setFilters({ ...filters, status: val })}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="RESIGNED">Resigned</SelectItem>
+                    <SelectItem value="LEAVE">Leave</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableHead>
+              <TableHead></TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center h-24">
+                <TableCell colSpan={8} className="text-center h-24">
                   Memuat data...
                 </TableCell>
               </TableRow>
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center h-24">
+                <TableCell colSpan={8} className="text-center h-24">
                   Belum ada data karyawan.
                 </TableCell>
               </TableRow>
+            ) : filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center h-24">
+                  Data tidak ditemukan.
+                </TableCell>
+              </TableRow>
             ) : (
-              data.map((item) => (
+              paginatedData.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     <div className="flex flex-col">
@@ -417,17 +523,24 @@ export default function MasterKaryawan() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{item.nama}</span>
-                      <span className="text-xs text-muted-foreground">{item.telepon || "-"}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">{item.telepon || "-"}</span>
+                        {item.telepon && (
+                          <a href={`https://wa.me/${item.telepon.replace(/\D/g, "").replace(/^0/, "62")}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700 transition-colors" title="Chat WhatsApp">
+                            <IconBrandWhatsapp className="size-3.5" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1 text-xs font-semibold">
-                        <IconBriefcase className="size-3" /> {item.jabatan?.nama || "-"}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <IconSitemap className="size-3" /> {item.departemen?.nama || "-"}
-                      </div>
+                    <div className="flex items-center gap-1 text-xs font-semibold">
+                      <IconBriefcase className="size-3" /> {item.jabatan?.nama || "-"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <IconSitemap className="size-3" /> {item.departemen?.nama || "-"}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -442,7 +555,13 @@ export default function MasterKaryawan() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={item.status === "ACTIVE" ? "default" : "secondary"}>{item.status}</Badge>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        item.status === "ACTIVE" ? "bg-green-100 text-green-700" : item.status === "RESIGNED" ? "bg-red-100 text-red-700" : item.status === "LEAVE" ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {item.status === "ACTIVE" ? "Aktif" : item.status === "RESIGNED" ? "Resigned" : item.status === "LEAVE" ? "Cuti" : item.status}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -459,6 +578,46 @@ export default function MasterKaryawan() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="text-sm text-muted-foreground">
+          Menampilkan {paginatedData.length > 0 ? (itemsPerPage === 0 ? 1 : (currentPage - 1) * itemsPerPage + 1) : 0} hingga {itemsPerPage === 0 ? filteredData.length : Math.min(currentPage * itemsPerPage, filteredData.length)} dari{" "}
+          {filteredData.length} data
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 mr-4">
+            <span className="text-sm text-muted-foreground">Baris per halaman</span>
+            <Select
+              value={itemsPerPage === 0 ? "all" : itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(value === "all" ? 0 : Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[70px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="all">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="cursor-pointer">
+            Sebelumnya
+          </Button>
+          <div className="text-sm font-medium">
+            Halaman {currentPage} dari {totalPages}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="cursor-pointer">
+            Selanjutnya
+          </Button>
+        </div>
       </div>
     </div>
   );

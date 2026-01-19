@@ -157,10 +157,10 @@ export default function MasterJenisPekerjaan() {
       </Dialog>
 
       {/* Table */}
-      <div className="border rounded-md">
+      <div className="rounded-xl border shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-blue-600 hover:bg-blue-600 [&_th]:text-white">
               <TableHead>Kode</TableHead>
               <TableHead>Nama Pekerjaan</TableHead>
               <TableHead className="text-right">Aksi</TableHead>

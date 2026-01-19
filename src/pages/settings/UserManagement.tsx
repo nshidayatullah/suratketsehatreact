@@ -5,10 +5,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IconPencil, IconPlus, IconTrash, IconUser } from "@tabler/icons-react";
+import { IconPencil, IconPlus, IconTrash, IconUser, IconUsers } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { getRoleIcon } from "@/lib/role-utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 interface Role {
   id: number;
@@ -21,6 +23,7 @@ interface User {
   nrp: string;
   roleId: number;
   role: Role;
+  status: string; // ACTIVE, INACTIVE
 }
 
 export default function UserManagement() {
@@ -39,7 +42,18 @@ export default function UserManagement() {
     nrp: "",
     password: "", // Only sent if changed
     roleId: "",
+    status: "ACTIVE",
   });
+
+  // Filter & Pagination State
+  const [filters, setFilters] = useState({
+    name: "",
+    nrp: "",
+    role: "all",
+    status: "all",
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Fetch Data
   const fetchData = async (retry = false) => {
@@ -76,6 +90,7 @@ export default function UserManagement() {
       nrp: "",
       password: "",
       roleId: "",
+      status: "ACTIVE",
     });
     setOpen(true);
   };
@@ -89,6 +104,7 @@ export default function UserManagement() {
       nrp: item.nrp,
       password: "", // Leave blank to keep current
       roleId: item.roleId.toString(),
+      status: item.status || "ACTIVE",
     });
     setOpen(true);
   };
@@ -151,6 +167,17 @@ export default function UserManagement() {
     }
   };
 
+  const filteredData = data.filter((item) => {
+    const matchName = (item.name || "").toLowerCase().includes(filters.name.toLowerCase());
+    const matchNrp = item.nrp.toLowerCase().includes(filters.nrp.toLowerCase());
+    const matchRole = filters.role === "all" || item.role?.id.toString() === filters.role;
+    const matchStatus = filters.status === "all" || item.status === filters.status;
+    return matchName && matchNrp && matchRole && matchStatus;
+  });
+
+  const totalPages = itemsPerPage === 0 ? 1 : Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = itemsPerPage === 0 ? filteredData : filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -207,6 +234,16 @@ export default function UserManagement() {
                 <Label>Password {isEditing && "(Kosongkan jika tidak ubah)"}</Label>
                 <Input type="password" placeholder={isEditing ? "********" : "Password Baru"} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
               </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-left">
+                  Status
+                </Label>
+                <div className="flex items-center space-x-2 col-span-3">
+                  <Switch id="status" checked={formData.status === "ACTIVE"} onCheckedChange={(checked: boolean) => setFormData({ ...formData, status: checked ? "ACTIVE" : "INACTIVE" })} />
+                  <Label htmlFor="status">{formData.status === "ACTIVE" ? "Aktif" : "Non Aktif"}</Label>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting} className="cursor-pointer transition-all hover:bg-primary/90 active:scale-95">
@@ -217,15 +254,83 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* Stats Overview */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <IconUsers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Aktif</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.filter((i) => i.status === "ACTIVE").length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Non Aktif</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.filter((i) => i.status !== "ACTIVE").length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Table */}
       <div className="border rounded-md">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-blue-600 hover:bg-blue-600 [&_th]:text-white">
               <TableHead>Nama</TableHead>
               <TableHead>NRP</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead className="p-2">
+                <Input placeholder="Filter Nama" value={filters.name} onChange={(e) => setFilters({ ...filters, name: e.target.value })} className="h-8 text-xs" />
+              </TableHead>
+              <TableHead className="p-2">
+                <Input placeholder="Filter NRP" value={filters.nrp} onChange={(e) => setFilters({ ...filters, nrp: e.target.value })} className="h-8 text-xs" />
+              </TableHead>
+              <TableHead className="p-2">
+                <Select value={filters.role} onValueChange={(val) => setFilters({ ...filters, role: val })}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua</SelectItem>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.id.toString()}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TableHead>
+              <TableHead className="p-2">
+                <Select value={filters.status} onValueChange={(val) => setFilters({ ...filters, status: val })}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua</SelectItem>
+                    <SelectItem value="ACTIVE">Aktif</SelectItem>
+                    <SelectItem value="INACTIVE">Non Aktif</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -241,8 +346,14 @@ export default function UserManagement() {
                   Belum ada user.
                 </TableCell>
               </TableRow>
+            ) : filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center h-24">
+                  Data tidak ditemukan.
+                </TableCell>
+              </TableRow>
             ) : (
-              data.map((item) => (
+              paginatedData.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     <div className="flex items-center gap-2 font-medium">
@@ -256,6 +367,11 @@ export default function UserManagement() {
                       {getRoleIcon(item.role?.name)}
                       {item.role?.name || "No Role"}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {item.status === "ACTIVE" ? "Aktif" : "Non Aktif"}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -272,6 +388,46 @@ export default function UserManagement() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="text-sm text-muted-foreground">
+          Menampilkan {paginatedData.length > 0 ? (itemsPerPage === 0 ? 1 : (currentPage - 1) * itemsPerPage + 1) : 0} hingga {itemsPerPage === 0 ? filteredData.length : Math.min(currentPage * itemsPerPage, filteredData.length)} dari{" "}
+          {filteredData.length} data
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 mr-4">
+            <span className="text-sm text-muted-foreground">Baris per halaman</span>
+            <Select
+              value={itemsPerPage === 0 ? "all" : itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(value === "all" ? 0 : Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[70px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="all">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="cursor-pointer">
+            Sebelumnya
+          </Button>
+          <div className="text-sm font-medium">
+            Halaman {currentPage} dari {totalPages}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="cursor-pointer">
+            Selanjutnya
+          </Button>
+        </div>
       </div>
     </div>
   );

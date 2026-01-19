@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { IconPencil, IconActivity, IconStethoscope, IconThermometer, IconLungs, IconHeartRateMonitor } from "@tabler/icons-react";
+import { IconPencil, IconActivity, IconThermometer, IconLungs, IconWind, IconHeartbeat } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface VitalsThreshold {
   id: number;
@@ -17,12 +18,15 @@ interface VitalsThreshold {
 }
 
 // Helper icons
+// Helper icons
 const getIcon = (key: string) => {
-  if (key.includes("sistole") || key.includes("diastole")) return <IconStethoscope className="size-4 text-blue-500" />;
-  if (key.includes("nadi")) return <IconHeartRateMonitor className="size-4 text-red-500" />;
-  if (key.includes("suhu")) return <IconThermometer className="size-4 text-orange-500" />;
-  if (key.includes("rr")) return <IconLungs className="size-4 text-green-500" />;
-  return <IconActivity className="size-4" />;
+  if (key.includes("sistole")) return <IconHeartbeat className="size-20 text-red-600 transition-transform duration-300 group-hover:animate-bounce" />;
+  if (key.includes("diastole")) return <IconHeartbeat className="size-20 text-blue-600 transition-transform duration-300 group-hover:animate-bounce" />;
+  if (key.includes("nadi")) return <IconActivity className="size-20 text-red-500 transition-transform duration-300 group-hover:animate-bounce" />;
+  if (key.includes("suhu")) return <IconThermometer className="size-20 text-orange-500 transition-transform duration-300 group-hover:animate-bounce" />;
+  if (key.includes("rr")) return <IconWind className="size-20 text-blue-500 transition-transform duration-300 group-hover:animate-bounce" />;
+  if (key.includes("spo2")) return <IconLungs className="size-20 text-cyan-500 transition-transform duration-300 group-hover:animate-bounce" />;
+  return <IconActivity className="size-20 text-gray-500 transition-transform duration-300 group-hover:animate-bounce" />;
 };
 
 export default function Threshold() {
@@ -139,54 +143,46 @@ export default function Threshold() {
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Parameter</TableHead>
-              <TableHead>Minimum</TableHead>
-              <TableHead>Maksimum</TableHead>
-              <TableHead>Satuan</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
-                  Memuat data...
-                </TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
-                  Data kosong.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2 font-medium">
-                      {getIcon(item.key)}
-                      {item.label}
+      {/* Card Grid */}
+      {loading ? (
+        <div className="text-center py-10 text-muted-foreground">Memuat data...</div>
+      ) : data.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground">Tidak ada data threshold.</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {data.map((item) => (
+            <Card key={item.id} className="group hover:shadow-md transition-all cursor-pointer border-l-4 border-l-primary flex flex-col justify-between h-full" onClick={() => handleEdit(item)}>
+              <CardHeader className="pb-2 text-center">
+                <CardTitle className="text-sm font-medium line-clamp-2 min-h-10 flex items-center justify-center leading-tight" title={item.label}>
+                  {item.label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 grow flex flex-col items-center justify-between gap-4 p-4">
+                <div className="flex flex-col items-center justify-center gap-3 grow w-full">
+                  <div className="flex items-center justify-center py-2">{getIcon(item.key)}</div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold tracking-tight">
+                      {item.min} - {item.max}
                     </div>
-                  </TableCell>
-                  <TableCell>{item.min}</TableCell>
-                  <TableCell>{item.max}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.unit}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(item)} className="cursor-pointer hover:bg-muted active:scale-95 transition-all">
-                      <IconPencil className="size-4 mr-1" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    <p className="text-xs text-muted-foreground font-semibold mt-1">{item.unit}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(item);
+                  }}
+                >
+                  <IconPencil className="size-3.5 mr-1.5" /> Ubah Batas
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

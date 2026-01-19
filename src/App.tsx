@@ -8,6 +8,7 @@ import MasterJabatan from "@/pages/master/Jabatan";
 import MasterKaryawan from "@/pages/master/Karyawan";
 import MasterJenisPekerjaan from "@/pages/master/JenisPekerjaan";
 import PengajuanPage from "@/pages/pengajuan/Index";
+import PengajuanDetail from "@/pages/pengajuan/Detail";
 import UserManagement from "@/pages/settings/UserManagement";
 import RoleManagement from "@/pages/settings/RoleManagement";
 import Threshold from "@/pages/settings/Threshold";
@@ -29,6 +30,7 @@ function App() {
               <Route path="master/jenis-pekerjaan" element={<MasterJenisPekerjaan />} />
               <Route path="master/karyawan" element={<MasterKaryawan />} />
               <Route path="pengajuan" element={<PengajuanPage />} />
+              <Route path="pengajuan/:id" element={<PengajuanDetail />} />
               <Route path="settings/users" element={<UserManagement />} />
               <Route path="settings/roles" element={<RoleManagement />} />
               <Route path="settings/thresholds" element={<Threshold />} />
